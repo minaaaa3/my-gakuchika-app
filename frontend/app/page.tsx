@@ -57,7 +57,8 @@ export default function GakuchikaPage() {
     // 演出のために最低1.5秒はローディングを見せる
     const start = Date.now();
     try {
-      const response = await fetch("http://localhost:5000/logs", {
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const response = await fetch(`${apiUrl}/logs`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ userId: "dummy-id", content: text }),
