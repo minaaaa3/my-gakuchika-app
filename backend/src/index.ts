@@ -18,6 +18,11 @@ const PORT = 5000;
 app.use(cors());
 app.use(express.json());
 
+// ヘルスチェック
+app.get("/", (_req, res) => {
+  res.send("Gakuchika Log API is running!");
+});
+
 app.post("/logs", async (req, res) => {
   try {
     const { content, targetJob } = req.body;
