@@ -98,9 +98,17 @@ const analyzeGakuchika = (content_1, ...args_1) => __awaiter(void 0, [content_1,
                 const responseText = data.candidates[0].content.parts[0].text;
                 console.log(`✅ ${modelName} で成功!`);
                 console.log("🔍 Gemini Response:", responseText);
-                // JSONブロックを抽出
-                const jsonMatch = responseText.match(/```(?:json)?\s*([\s\S]*?)\s*```/);
-                const jsonText = jsonMatch ? jsonMatch[1].trim() : responseText.trim();
+                // JSONブロックや不要なテキストを確実に取り除く
+                const jsonMatch = responseText.match(/```[a-zA-Z]*\s*([\s\S]*?)\s*```/);
+                let jsonText = jsonMatch ? jsonMatch[1].trim() : responseText.trim();
+                // 途中で途切れて ``` が閉じられていない場合などに備えて直接除去
+                jsonText = jsonText.replace(/^```[a-zA-Z]*\s*/i, "").replace(/\s*```$/i, "").trim();
+                // JSONの波括弧 {...} の部分だけを抽出（前後の挨拶などを無視）
+                const firstBrace = jsonText.indexOf('{');
+                const lastBrace = jsonText.lastIndexOf('}');
+                if (firstBrace !== -1 && lastBrace !== -1 && lastBrace >= firstBrace) {
+                    jsonText = jsonText.substring(firstBrace, lastBrace + 1);
+                }
                 return JSON.parse(jsonText);
             }
             else {

@@ -58,6 +58,12 @@ export default function GakuchikaPage() {
   const supabase = createClient();
 
   useEffect(() => {
+    // --- 環境変数チェックログ ---
+    console.log("--- フロントエンド環境変数チェック ---");
+    console.log("API URL:", process.env.NEXT_PUBLIC_API_URL);
+    console.log("Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL ? "✅ 設定あり" : "❌ 未設定");
+    console.log("-----------------------------------");
+
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
@@ -103,7 +109,8 @@ export default function GakuchikaPage() {
       });
 
       if (!response.ok) {
-        throw new Error("APIエラー: " + response.statusText);
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || errorData.error || "APIエラー: " + response.statusText);
       }
 
       const data = await response.json();

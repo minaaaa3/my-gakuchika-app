@@ -13,9 +13,11 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
 };
 Object.defineProperty(exports, "__esModule", { value: true });
 // backend/src/index.ts
+require("dotenv/config");
 const express_1 = __importDefault(require("express"));
 const cors_1 = __importDefault(require("cors"));
 const gemini_1 = require("./lib/gemini");
+const auth_1 = require("./middleware/auth");
 // 【重要】ここでチェック！
 console.log("--- サーバー起動チェック ---");
 console.log("取得したAPIキー:", process.env.GEMINI_API_KEY
@@ -27,10 +29,16 @@ const PORT = 5000;
 // ミドルウェア
 app.use((0, cors_1.default)());
 app.use(express_1.default.json());
-app.post("/logs", (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+// ヘルスチェック
+app.get("/", (_req, res) => {
+    res.send("Gakuchika Log API is running!");
+});
+app.post("/logs", auth_1.requireAuth, (req, res) => __awaiter(void 0, void 0, void 0, function* () {
+    var _a;
     try {
         const { content, targetJob } = req.body;
-        console.log("分析開始:", content);
+        const userId = ((_a = req.user) === null || _a === void 0 ? void 0 : _a.id) || "unknown-user";
+        console.log(`分析開始 (User: ${userId}):`, content);
         // AIで分析を実行
         const analysisResult = yield (0, gemini_1.analyzeGakuchika)(content, targetJob);
         // AIの結果をフロントエンドに返す
