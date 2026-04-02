@@ -2,6 +2,8 @@
 import express from "express";
 import cors from "cors";
 import { analyzeGakuchika } from "./lib/gemini";
+import { requireAuth, AuthRequest } from "./middleware/auth";
+
 // 【重要】ここでチェック！
 console.log("--- サーバー起動チェック ---");
 console.log(
@@ -23,11 +25,12 @@ app.get("/", (_req, res) => {
   res.send("Gakuchika Log API is running!");
 });
 
-app.post("/logs", async (req, res) => {
+app.post("/logs", requireAuth, async (req: AuthRequest, res: any) => {
   try {
     const { content, targetJob } = req.body;
+    const userId = req.user?.id || "unknown-user";
 
-    console.log("分析開始:", content);
+    console.log(`分析開始 (User: ${userId}):`, content);
 
     // AIで分析を実行
     const analysisResult = await analyzeGakuchika(content, targetJob);

@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { Sparkles, ArrowRight, Quote } from "lucide-react";
 import Lottie from "lottie-react";
 import loadingAnimation from "@/public/loading-bot.json";
+import { createClient } from "@/utils/supabase/client";
+import Link from "next/link";
 
 // 型定義
 interface AnalysisResult {
@@ -51,18 +53,59 @@ export default function GakuchikaPage() {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [user, setUser] = useState<any>(null);
+
+  const supabase = createClient();
+
+  useEffect(() => {
+    const getUser = async () => {
+      const { data: { user } } = await supabase.auth.getUser();
+      setUser(user);
+    }
+    getUser();
+
+    const { data: authListener } = supabase.auth.onAuthStateChange(
+      (event, session) => {
+        setUser(session?.user || null);
+      }
+    );
+
+    return () => {
+      authListener.subscription.unsubscribe();
+    };
+  }, [supabase.auth]);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+  };
 
   const handleAnalyze = async () => {
+    if (!user) {
+      alert("ログインしてください！");
+      return;
+    }
+
     setLoading(true);
     // 演出のために最低1.5秒はローディングを見せる
     const start = Date.now();
     try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
       const response = await fetch(`${apiUrl}/logs`, {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ userId: "dummy-id", content: text }),
+        headers: { 
+          "Content-Type": "application/json",
+          ...(token && { Authorization: `Bearer ${token}` })
+        },
+        body: JSON.stringify({ content: text }),
       });
+
+      if (!response.ok) {
+        throw new Error("APIエラー: " + response.statusText);
+      }
+
       const data = await response.json();
 
       const elapsed = Date.now() - start;
@@ -70,9 +113,9 @@ export default function GakuchikaPage() {
         setResult(data.analysis);
         setLoading(false);
       }, Math.max(0, 1500 - elapsed));
-    } catch (e) {
+    } catch (e: any) {
       setLoading(false);
-      alert("エラーが発生しました！");
+      alert(e.message || "エラーが発生しました！");
     }
   };
 
@@ -90,6 +133,26 @@ export default function GakuchikaPage() {
           <span className="font-black text-2xl tracking-tighter italic">
             Gakuchika Log
           </span>
+        </div>
+        <div>
+          {user ? (
+            <div className="flex items-center gap-4">
+              <span className="text-sm font-medium text-slate-500 hidden sm:inline-block">{user.email}</span>
+              <button 
+                onClick={handleLogout}
+                className="text-sm font-bold text-slate-500 hover:text-rose-500 transition-colors"
+              >
+                ログアウト
+              </button>
+            </div>
+          ) : (
+            <Link 
+              href="/login"
+              className="bg-slate-900 text-white text-sm font-bold py-2 px-6 rounded-full hover:bg-slate-800 transition-colors shadow-md"
+            >
+              ログイン
+            </Link>
+          )}
         </div>
       </nav>
 
