@@ -53,9 +53,31 @@ export default function GakuchikaPage() {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
+  const [history, setHistory] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
 
   const supabase = createClient();
+
+  const fetchHistory = async () => {
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const token = session?.access_token;
+      if (!token) return;
+
+      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      const response = await fetch(`${apiUrl}/logs`, {
+        headers: { 
+          Authorization: `Bearer ${token}` 
+        },
+      });
+      if (response.ok) {
+        const data = await response.json();
+        setHistory(data);
+      }
+    } catch (e) {
+      console.error("履歴の取得に失敗:", e);
+    }
+  };
 
   useEffect(() => {
     // --- 環境変数チェックログ ---
@@ -67,12 +89,15 @@ export default function GakuchikaPage() {
     const getUser = async () => {
       const { data: { user } } = await supabase.auth.getUser();
       setUser(user);
+      if (user) fetchHistory();
     }
     getUser();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
       (event, session) => {
-        setUser(session?.user || null);
+        const currentUser = session?.user || null;
+        setUser(currentUser);
+        if (currentUser) fetchHistory();
       }
     );
 
@@ -114,6 +139,7 @@ export default function GakuchikaPage() {
       }
 
       const data = await response.json();
+      await fetchHistory();
 
       const elapsed = Date.now() - start;
       setTimeout(() => {
@@ -311,6 +337,37 @@ export default function GakuchikaPage() {
               </div>
             </div>
           </div>
+        )}
+
+        {/* 履歴表示 */}
+        {user && !loading && !result && history.length > 0 && (
+          <section className="pt-10 space-y-6">
+            <h3 className="text-2xl font-black flex items-center gap-2">
+              <Quote className="text-indigo-600" />
+              過去のログ
+            </h3>
+            <div className="grid gap-4">
+              {history.map((item) => (
+                <div 
+                  key={item.id} 
+                  className="bg-white p-6 rounded-3xl border-2 border-slate-100 hover:border-indigo-200 transition-colors cursor-pointer group"
+                  onClick={() => setResult({ strength: item.strength, es_ready_text: item.esReadyText })}
+                >
+                  <div className="flex justify-between items-start mb-2">
+                    <span className="text-xs font-bold text-slate-400">
+                      {new Date(item.createdAt).toLocaleDateString()}
+                    </span>
+                    <span className="bg-indigo-50 text-indigo-600 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
+                      {item.strength || "分析中"}
+                    </span>
+                  </div>
+                  <p className="text-slate-600 line-clamp-2 text-sm font-medium">
+                    {item.content}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </section>
         )}
       </main>
     </div>

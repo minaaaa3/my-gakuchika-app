@@ -4,6 +4,9 @@ import express from "express";
 import cors from "cors";
 import { analyzeGakuchika } from "./lib/gemini";
 import { requireAuth, AuthRequest } from "./middleware/auth";
+import { db } from "./db/index";
+import { users, logs, aiAnalyses } from "./db/schema";
+import { eq, desc } from "drizzle-orm";
 
 const app = express();
 const PORT = process.env.PORT || 5000;
@@ -28,18 +31,72 @@ app.get("/", (_req, res) => {
   res.send("Gakuchika Log API is running!");
 });
 
+// 履歴取得エンドポイント
+app.get("/logs", requireAuth, async (req: AuthRequest, res: any) => {
+  try {
+    const userId = req.user?.id;
+    if (!userId) return res.status(401).json({ error: "Unauthorized" });
+
+    // 履歴をデータベースから取得（新しい順）
+    // logs と aiAnalyses を結合
+    const userLogs = await db
+      .select({
+        id: logs.id,
+        content: logs.content,
+        createdAt: logs.createdAt,
+        strength: aiAnalyses.strength,
+        esReadyText: aiAnalyses.esReadyText,
+      })
+      .from(logs)
+      .leftJoin(aiAnalyses, eq(logs.id, aiAnalyses.logId))
+      .where(eq(logs.userId, userId))
+      .orderBy(desc(logs.createdAt));
+
+    res.json(userLogs);
+  } catch (error: any) {
+    console.error("Fetch Logs Error:", error);
+    res.status(500).json({ error: "履歴の取得に失敗しました" });
+  }
+});
+
+// 分析実行・保存エンドポイント
 app.post("/logs", requireAuth, async (req: AuthRequest, res: any) => {
   try {
     const { content, targetJob } = req.body;
-    const userId = req.user?.id || "unknown-user";
+    const userId = req.user?.id;
+    const email = req.user?.email;
+
+    if (!userId || !email) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
 
     console.log(`分析開始 (User: ${userId}):`, content);
 
-    // AIで分析を実行
+    // 1. ユーザーをDBに同期 (存在しなければ作成)
+    // drizzle-orm の upsert パターン
+    await db.insert(users)
+      .values({ id: userId, email: email })
+      .onConflictDoNothing();
+
+    // 2. AIで分析を実行
     const analysisResult = await analyzeGakuchika(content, targetJob);
+
+    // 3. データベースに保存
+    const [insertedLog] = await db.insert(logs).values({
+      userId: userId,
+      content: content,
+    }).returning({ id: logs.id });
+
+    await db.insert(aiAnalyses).values({
+      logId: insertedLog.id,
+      strength: analysisResult.strength,
+      esReadyText: analysisResult.es_ready_text,
+      followUpQuestions: JSON.stringify(analysisResult.follow_up_questions),
+    });
 
     // AIの結果をフロントエンドに返す
     res.json({
+      id: insertedLog.id,
       analysis: analysisResult,
     });
   } catch (error: any) {

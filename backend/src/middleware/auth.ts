@@ -1,15 +1,21 @@
 import { Request, Response, NextFunction } from "express";
-import { createClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient } from "@supabase/supabase-js";
 
-// 環境変数からSupabase情報を取得
-const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
-const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+let supabase: SupabaseClient | null = null;
 
-if (!supabaseUrl || !supabaseKey) {
-  console.warn("Supabase URL or Key is missing in environment variables.");
-}
+const getSupabase = () => {
+  if (supabase) return supabase;
 
-const supabase = createClient(supabaseUrl || "", supabaseKey || "");
+  const supabaseUrl = process.env.SUPABASE_URL || process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseKey = process.env.SUPABASE_ANON_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error("Supabase URL or Key is missing in environment variables.");
+  }
+
+  supabase = createClient(supabaseUrl, supabaseKey);
+  return supabase;
+};
 
 export interface AuthRequest extends Request {
   user?: any;
@@ -25,8 +31,11 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
 
     const token = authHeader.split(" ")[1];
     
+    // Supabase インスタンスを取得
+    const client = getSupabase();
+    
     // Supabase で JWT トークンを検証し、ユーザー情報を取得
-    const { data: { user }, error } = await supabase.auth.getUser(token);
+    const { data: { user }, error } = await client.auth.getUser(token);
 
     if (error || !user) {
       console.error("Auth Error:", error);
@@ -36,8 +45,8 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
 
     req.user = user;
     next();
-  } catch (error) {
+  } catch (error: any) {
     console.error("Auth Middleware Error:", error);
-    res.status(500).json({ error: "サーバーエラー" });
+    res.status(500).json({ error: "サーバーエラー", message: error.message });
   }
 };
