@@ -47,7 +47,7 @@ export const analyzeGakuchika = async (
     "models/gemini-pro-latest",
   ];
 
-  let lastError: any = null;
+  let lastError: Error | null = null;
 
   for (const modelName of modelNames) {
     try {
@@ -99,5 +99,7 @@ export const analyzeGakuchika = async (
     }
   }
 
+  throw lastError || new Error("AIが正常に思考できませんでした。全モデルが失敗しました。");
+};
   throw lastError || new Error("AIが正常に思考できませんでした。全モデルが失敗しました。");
 };

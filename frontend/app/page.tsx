@@ -6,11 +6,26 @@ import Lottie from "lottie-react";
 import loadingAnimation from "@/public/loading-bot.json";
 import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
+import { User } from "@supabase/supabase-js";
 
-// 型定義
+// Types
 interface AnalysisResult {
   strength: string;
   es_ready_text: string;
+}
+
+interface LogItem {
+  id: string;
+  content: string;
+  createdAt?: string;
+  created_at?: string;
+  strength?: string;
+  esReadyText?: string;
+  es_ready_text?: string;
+  analysis?: {
+    strength: string;
+    es_ready_text: string;
+  };
 }
 
 // --- 手書き風カスタムアイコン ---
@@ -53,30 +68,40 @@ export default function GakuchikaPage() {
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
-  const [history, setHistory] = useState<any[]>([]);
-  const [user, setUser] = useState<any>(null);
+  const [history, setHistory] = useState<LogItem[]>([]);
+  const [user, setUser] = useState<User | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showCalendar, setShowCalendar] = useState(false);
 
   const supabase = createClient();
 
   // カレンダー用のヘルパー
-  const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
-  const getFirstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
+  const getDaysInMonth = (year: number, month: number) =>
+    new Date(year, month + 1, 0).getDate();
+  const getFirstDayOfMonth = (year: number, month: number) =>
+    new Date(year, month, 1).getDay();
 
-  const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
-  const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
+  const prevMonth = () =>
+    setCurrentDate(
+      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1)
+    );
+  const nextMonth = () =>
+    setCurrentDate(
+      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1)
+    );
 
   const fetchHistory = async () => {
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const token = session?.access_token;
       if (!token) return;
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
       const response = await fetch(`${apiUrl}/logs`, {
-        headers: { 
-          Authorization: `Bearer ${token}` 
+        headers: {
+          Authorization: `Bearer ${token}`,
         },
       });
       if (response.ok) {
@@ -92,14 +117,19 @@ export default function GakuchikaPage() {
     // --- 環境変数チェックログ ---
     console.log("--- フロントエンド環境変数チェック ---");
     console.log("API URL:", process.env.NEXT_PUBLIC_API_URL);
-    console.log("Supabase URL:", process.env.NEXT_PUBLIC_SUPABASE_URL ? "✅ 設定あり" : "❌ 未設定");
+    console.log(
+      "Supabase URL:",
+      process.env.NEXT_PUBLIC_SUPABASE_URL ? "✅ 設定あり" : "❌ 未設定"
+    );
     console.log("-----------------------------------");
 
     const getUser = async () => {
-      const { data: { user } } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
       setUser(user);
       if (user) fetchHistory();
-    }
+    };
     getUser();
 
     const { data: authListener } = supabase.auth.onAuthStateChange(
@@ -129,22 +159,28 @@ export default function GakuchikaPage() {
     // 演出のために最低1.5秒はローディングを見せる
     const start = Date.now();
     try {
-      const { data: { session } } = await supabase.auth.getSession();
+      const {
+        data: { session },
+      } = await supabase.auth.getSession();
       const token = session?.access_token;
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
       const response = await fetch(`${apiUrl}/logs`, {
         method: "POST",
-        headers: { 
+        headers: {
           "Content-Type": "application/json",
-          ...(token && { Authorization: `Bearer ${token}` })
+          ...(token && { Authorization: `Bearer ${token}` }),
         },
         body: JSON.stringify({ content: text }),
       });
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || errorData.error || "APIエラー: " + response.statusText);
+        throw new Error(
+          errorData.message ||
+            errorData.error ||
+            "APIエラー: " + response.statusText
+        );
       }
 
       const data = await response.json();
@@ -155,9 +191,10 @@ export default function GakuchikaPage() {
         setResult(data.analysis);
         setLoading(false);
       }, Math.max(0, 1500 - elapsed));
-    } catch (e: any) {
+    } catch (e) {
       setLoading(false);
-      alert(e.message || "エラーが発生しました！");
+      const message = e instanceof Error ? e.message : "エラーが発生しました！";
+      alert(message);
     }
   };
 
@@ -180,31 +217,47 @@ export default function GakuchikaPage() {
           {user ? (
             <div className="flex flex-col items-end gap-1">
               <div className="flex items-center gap-4">
-                <span className="text-sm font-medium text-slate-500 hidden sm:inline-block">{user.email}</span>
-                <button 
+                <span className="text-sm font-medium text-slate-500 hidden sm:inline-block">
+                  {user.email}
+                </span>
+                <button
                   onClick={handleLogout}
                   className="text-sm font-bold text-slate-500 hover:text-rose-500 transition-colors"
                 >
                   ログアウト
                 </button>
               </div>
-              <button 
+              <button
                 onClick={() => setShowCalendar(!showCalendar)}
                 className={`
                   flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-black transition-all
-                  ${showCalendar 
-                    ? 'bg-indigo-600 text-white shadow-md scale-105' 
-                    : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-2 border-indigo-100 shadow-sm'}
+                  ${
+                    showCalendar
+                      ? "bg-indigo-600 text-white shadow-md scale-105"
+                      : "bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-2 border-indigo-100 shadow-sm"
+                  }
                 `}
               >
-                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
-                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                <svg
+                  width="16"
+                  height="16"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                  stroke="currentColor"
+                  strokeWidth="3"
+                  strokeLinecap="round"
+                  strokeLinejoin="round"
+                >
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2" />
+                  <line x1="16" y1="2" x2="16" y2="6" />
+                  <line x1="8" y1="2" x2="8" y2="6" />
+                  <line x1="3" y1="10" x2="21" y2="10" />
                 </svg>
                 ログカレンダー
               </button>
             </div>
           ) : (
-            <Link 
+            <Link
               href="/login"
               className="bg-slate-900 text-white text-sm font-bold py-2 px-6 rounded-full hover:bg-slate-800 transition-colors shadow-md"
             >
@@ -368,7 +421,7 @@ export default function GakuchikaPage() {
         {user && !loading && showCalendar && (
           <section className="pt-10 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
             <div className="flex justify-between items-center">
-              <h3 
+              <h3
                 className="text-2xl font-black flex items-center gap-2 cursor-pointer hover:text-indigo-600 transition-colors"
                 onClick={() => setShowCalendar(false)}
               >
@@ -376,13 +429,19 @@ export default function GakuchikaPage() {
                 ログカレンダー
               </h3>
               <div className="flex items-center gap-4 bg-white px-4 py-2 rounded-2xl border-2 border-slate-100 shadow-sm">
-                <button onClick={prevMonth} className="p-1 hover:bg-slate-50 rounded-lg transition-colors font-bold text-indigo-600">
+                <button
+                  onClick={prevMonth}
+                  className="p-1 hover:bg-slate-50 rounded-lg transition-colors font-bold text-indigo-600"
+                >
                   &lt;
                 </button>
                 <span className="font-bold text-sm min-w-[100px] text-center">
                   {currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月
                 </span>
-                <button onClick={nextMonth} className="p-1 hover:bg-slate-50 rounded-lg transition-colors font-bold text-indigo-600">
+                <button
+                  onClick={nextMonth}
+                  className="p-1 hover:bg-slate-50 rounded-lg transition-colors font-bold text-indigo-600"
+                >
                   &gt;
                 </button>
               </div>
@@ -391,8 +450,17 @@ export default function GakuchikaPage() {
             <div className="bg-white p-6 rounded-[2.5rem] border-[3px] border-slate-900 shadow-[8px_8px_0_0_#1e293b]">
               {/* 曜日ヘッダー */}
               <div className="grid grid-cols-7 gap-2 mb-4">
-                {['日', '月', '火', '水', '木', '金', '土'].map((day, i) => (
-                  <div key={day} className={`text-center text-xs font-black uppercase tracking-widest ${i === 0 ? 'text-rose-500' : i === 6 ? 'text-indigo-500' : 'text-slate-400'}`}>
+                {["日", "月", "火", "水", "木", "金", "土"].map((day, i) => (
+                  <div
+                    key={day}
+                    className={`text-center text-xs font-black uppercase tracking-widest ${
+                      i === 0
+                        ? "text-rose-500"
+                        : i === 6
+                        ? "text-indigo-500"
+                        : "text-slate-400"
+                    }`}
+                  >
                     {day}
                   </div>
                 ))}
@@ -401,43 +469,82 @@ export default function GakuchikaPage() {
               {/* カレンダーグリッド */}
               <div className="grid grid-cols-7 gap-2">
                 {/* 月の開始前の空白 */}
-                {Array.from({ length: getFirstDayOfMonth(currentDate.getFullYear(), currentDate.getMonth()) }).map((_, i) => (
+                {Array.from({
+                  length: getFirstDayOfMonth(
+                    currentDate.getFullYear(),
+                    currentDate.getMonth()
+                  ),
+                }).map((_, i) => (
                   <div key={`empty-${i}`} className="aspect-square" />
                 ))}
 
                 {/* 日付セル */}
-                {Array.from({ length: getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth()) }).map((_, i) => {
+                {Array.from({
+                  length: getDaysInMonth(
+                    currentDate.getFullYear(),
+                    currentDate.getMonth()
+                  ),
+                }).map((_, i) => {
                   const day = i + 1;
-                  const dateStr = new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toLocaleDateString('ja-JP');
-                  const logsOnDay = history.filter(item => 
-                    new Date(item.createdAt || item.created_at).toLocaleDateString('ja-JP') === dateStr
+                  const targetDate = new Date(
+                    currentDate.getFullYear(),
+                    currentDate.getMonth(),
+                    day
                   );
 
+                  const logsOnDay = history.filter((item) => {
+                    const dateValue = item.createdAt || item.created_at;
+                    if (!dateValue) return false;
+                    const logDate = new Date(dateValue);
+                    return (
+                      logDate.getFullYear() === targetDate.getFullYear() &&
+                      logDate.getMonth() === targetDate.getMonth() &&
+                      logDate.getDate() === targetDate.getDate()
+                    );
+                  });
+
                   return (
-                    <div 
-                      key={day} 
+                    <div
+                      key={day}
                       className={`
                         aspect-square flex flex-col items-center justify-center rounded-xl transition-all relative cursor-default
-                        ${logsOnDay.length > 0 ? 'bg-indigo-50 cursor-pointer hover:scale-105 active:scale-95 group' : 'hover:bg-slate-50'}
+                        ${
+                          logsOnDay.length > 0
+                            ? "bg-indigo-50 cursor-pointer hover:scale-105 active:scale-95 group"
+                            : "hover:bg-slate-50"
+                        }
                       `}
                       onClick={() => {
                         if (logsOnDay.length > 0) {
                           const item = logsOnDay[0];
-                          setResult({ 
-                            strength: item.strength || item.analysis?.strength || "分析結果なし", 
-                            es_ready_text: item.esReadyText || item.es_ready_text || item.analysis?.es_ready_text || "文章が生成されていません" 
+                          setResult({
+                            strength:
+                              item.strength ||
+                              item.analysis?.strength ||
+                              "分析結果なし",
+                            es_ready_text:
+                              item.esReadyText ||
+                              item.es_ready_text ||
+                              item.analysis?.es_ready_text ||
+                              "文章が生成されていません",
                           });
-                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                          window.scrollTo({ top: 0, behavior: "smooth" });
                         }
                       }}
                     >
-                      <span className={`text-sm font-bold ${logsOnDay.length > 0 ? 'text-indigo-600' : 'text-slate-500'}`}>
+                      <span
+                        className={`text-sm font-bold ${
+                          logsOnDay.length > 0
+                            ? "text-indigo-600"
+                            : "text-slate-500"
+                        }`}
+                      >
                         {day}
                       </span>
                       {logsOnDay.length > 0 && (
                         <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full mt-1 group-hover:animate-ping" />
                       )}
-                      
+
                       {/* ツールチップ的なポップアップ（ホバー時） */}
                       {logsOnDay.length > 0 && (
                         <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-900 text-white text-[10px] p-3 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">

@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from "express";
-import { createClient, SupabaseClient } from "@supabase/supabase-js";
+import { createClient, SupabaseClient, User } from "@supabase/supabase-js";
 
 let supabase: SupabaseClient | null = null;
 
@@ -45,8 +45,9 @@ export const requireAuth = async (req: AuthRequest, res: Response, next: NextFun
 
     req.user = user;
     next();
-  } catch (error: any) {
+  } catch (error) {
     console.error("Auth Middleware Error:", error);
-    res.status(500).json({ error: "サーバーエラー", message: error.message });
+    const message = error instanceof Error ? error.message : "Internal Server Error";
+    res.status(500).json({ error: "サーバーエラー", message });
   }
 };

@@ -33,8 +33,9 @@ export default function LoginPage() {
         if (error) throw error;
         window.location.href = "/"; // ログイン成功時にトップページへリダイレクト
       }
-    } catch (error: any) {
-      setMessage(error.message);
+    } catch (error) {
+      const message = error instanceof Error ? error.message : "認証に失敗しました。";
+      setMessage(message);
     } finally {
       setLoading(false);
     }
