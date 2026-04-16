@@ -1,11 +1,11 @@
 # Gakuchika-log (ガクチカ・ログ)
 
-学生時代に力を入れたこと（ガクチカ）を整理・記録し、AI（Gemini）の力を借りてブラッシュアップするためのWebアプリケーションです。
+学生時代に力を入れたこと（ガクチカ）を整理・記録し、AI（Gemini）の力を借りてブラッシュアップするための Web アプリケーションです。
 
 ## 🚀 プロジェクト概要
 
-このプロジェクトは、就職活動や自己分析において重要な「ガクチカ」のエピソードを管理するために開発されました。
-直感的なUIでエピソードを記録し、Gemini API を活用して内容の改善提案や要約を行うことができます。
+このプロジェクトは、就職活動や自己分析において重要な”ガクチカ”のエピソードを管理するために開発されました。
+直感的な UI でエピソードを記録し、Gemini API を活用して内容の改善提案や要約を行うことができます。
 
 ### 主な機能
 
@@ -17,6 +17,7 @@
 ## 🛠 技術スタック
 
 ### Frontend
+
 - **Framework**: Next.js (App Router)
 - **Language**: TypeScript
 - **Styling**: Tailwind CSS 4.0
@@ -25,6 +26,7 @@
 - **Auth/Client**: Supabase SSR
 
 ### Backend
+
 - **Framework**: Express.js
 - **Language**: TypeScript
 - **Database ORM**: Drizzle ORM
@@ -60,7 +62,8 @@
 ## ⚙️ セットアップ
 
 ### プリレクイジット
-- Node.js (v18以上推奨)
+
+- Node.js (v18 以上推奨)
 - Supabase アカウント
 - Google Gemini API キー
 
@@ -69,12 +72,14 @@
 `frontend/.env.local` および `backend/.env` を作成し、必要な情報を入力してください。
 
 **Frontend (.env.local):**
+
 ```env
 NEXT_PUBLIC_SUPABASE_URL=your_supabase_url
 NEXT_PUBLIC_SUPABASE_ANON_KEY=your_supabase_anon_key
 ```
 
 **Backend (.env):**
+
 ```env
 DATABASE_URL=your_postgresql_url
 GEMINI_API_KEY=your_gemini_api_key
@@ -85,12 +90,14 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
 ### インストールと起動
 
 1. リポジトリのクローン
+
    ```bash
    git clone https://github.com/your-username/gakuchika-log.git
    cd gakuchika-log
    ```
 
 2. 依存関係のインストール
+
    ```bash
    # Frontend
    cd frontend
@@ -102,6 +109,7 @@ SUPABASE_SERVICE_ROLE_KEY=your_service_role_key
    ```
 
 3. 開発サーバーの起動
+
    ```bash
    # Frontend
    npm run dev

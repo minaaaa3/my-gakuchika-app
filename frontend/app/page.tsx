@@ -55,8 +55,17 @@ export default function GakuchikaPage() {
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [history, setHistory] = useState<any[]>([]);
   const [user, setUser] = useState<any>(null);
+  const [currentDate, setCurrentDate] = useState(new Date());
+  const [showCalendar, setShowCalendar] = useState(false);
 
   const supabase = createClient();
+
+  // カレンダー用のヘルパー
+  const getDaysInMonth = (year: number, month: number) => new Date(year, month + 1, 0).getDate();
+  const getFirstDayOfMonth = (year: number, month: number) => new Date(year, month, 1).getDay();
+
+  const prevMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() - 1));
+  const nextMonth = () => setCurrentDate(new Date(currentDate.getFullYear(), currentDate.getMonth() + 1));
 
   const fetchHistory = async () => {
     try {
@@ -169,13 +178,29 @@ export default function GakuchikaPage() {
         </div>
         <div>
           {user ? (
-            <div className="flex items-center gap-4">
-              <span className="text-sm font-medium text-slate-500 hidden sm:inline-block">{user.email}</span>
+            <div className="flex flex-col items-end gap-1">
+              <div className="flex items-center gap-4">
+                <span className="text-sm font-medium text-slate-500 hidden sm:inline-block">{user.email}</span>
+                <button 
+                  onClick={handleLogout}
+                  className="text-sm font-bold text-slate-500 hover:text-rose-500 transition-colors"
+                >
+                  ログアウト
+                </button>
+              </div>
               <button 
-                onClick={handleLogout}
-                className="text-sm font-bold text-slate-500 hover:text-rose-500 transition-colors"
+                onClick={() => setShowCalendar(!showCalendar)}
+                className={`
+                  flex items-center gap-1.5 px-3 py-1.5 rounded-xl text-sm font-black transition-all
+                  ${showCalendar 
+                    ? 'bg-indigo-600 text-white shadow-md scale-105' 
+                    : 'bg-indigo-50 text-indigo-600 hover:bg-indigo-100 border-2 border-indigo-100 shadow-sm'}
+                `}
               >
-                ログアウト
+                <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/>
+                </svg>
+                ログカレンダー
               </button>
             </div>
           ) : (
@@ -339,34 +364,103 @@ export default function GakuchikaPage() {
           </div>
         )}
 
-        {/* 履歴表示 */}
-        {user && !loading && !result && history.length > 0 && (
-          <section className="pt-10 space-y-6">
-            <h3 className="text-2xl font-black flex items-center gap-2">
-              <Quote className="text-indigo-600" />
-              過去のログ
-            </h3>
-            <div className="grid gap-4">
-              {history.map((item) => (
-                <div 
-                  key={item.id} 
-                  className="bg-white p-6 rounded-3xl border-2 border-slate-100 hover:border-indigo-200 transition-colors cursor-pointer group"
-                  onClick={() => setResult({ strength: item.strength, es_ready_text: item.esReadyText })}
-                >
-                  <div className="flex justify-between items-start mb-2">
-                    <span className="text-xs font-bold text-slate-400">
-                      {new Date(item.createdAt).toLocaleDateString()}
-                    </span>
-                    <span className="bg-indigo-50 text-indigo-600 text-[10px] font-black px-2 py-0.5 rounded-full uppercase">
-                      {item.strength || "分析中"}
-                    </span>
-                  </div>
-                  <p className="text-slate-600 line-clamp-2 text-sm font-medium">
-                    {item.content}
-                  </p>
-                </div>
-              ))}
+        {/* 履歴表示（カレンダー形式） */}
+        {user && !loading && showCalendar && (
+          <section className="pt-10 space-y-6 animate-in fade-in slide-in-from-top-4 duration-500">
+            <div className="flex justify-between items-center">
+              <h3 
+                className="text-2xl font-black flex items-center gap-2 cursor-pointer hover:text-indigo-600 transition-colors"
+                onClick={() => setShowCalendar(false)}
+              >
+                <Quote className="text-indigo-600" />
+                ログカレンダー
+              </h3>
+              <div className="flex items-center gap-4 bg-white px-4 py-2 rounded-2xl border-2 border-slate-100 shadow-sm">
+                <button onClick={prevMonth} className="p-1 hover:bg-slate-50 rounded-lg transition-colors font-bold text-indigo-600">
+                  &lt;
+                </button>
+                <span className="font-bold text-sm min-w-[100px] text-center">
+                  {currentDate.getFullYear()}年 {currentDate.getMonth() + 1}月
+                </span>
+                <button onClick={nextMonth} className="p-1 hover:bg-slate-50 rounded-lg transition-colors font-bold text-indigo-600">
+                  &gt;
+                </button>
+              </div>
             </div>
+
+            <div className="bg-white p-6 rounded-[2.5rem] border-[3px] border-slate-900 shadow-[8px_8px_0_0_#1e293b]">
+              {/* 曜日ヘッダー */}
+              <div className="grid grid-cols-7 gap-2 mb-4">
+                {['日', '月', '火', '水', '木', '金', '土'].map((day, i) => (
+                  <div key={day} className={`text-center text-xs font-black uppercase tracking-widest ${i === 0 ? 'text-rose-500' : i === 6 ? 'text-indigo-500' : 'text-slate-400'}`}>
+                    {day}
+                  </div>
+                ))}
+              </div>
+
+              {/* カレンダーグリッド */}
+              <div className="grid grid-cols-7 gap-2">
+                {/* 月の開始前の空白 */}
+                {Array.from({ length: getFirstDayOfMonth(currentDate.getFullYear(), currentDate.getMonth()) }).map((_, i) => (
+                  <div key={`empty-${i}`} className="aspect-square" />
+                ))}
+
+                {/* 日付セル */}
+                {Array.from({ length: getDaysInMonth(currentDate.getFullYear(), currentDate.getMonth()) }).map((_, i) => {
+                  const day = i + 1;
+                  const dateStr = new Date(currentDate.getFullYear(), currentDate.getMonth(), day).toLocaleDateString('ja-JP');
+                  const logsOnDay = history.filter(item => 
+                    new Date(item.createdAt || item.created_at).toLocaleDateString('ja-JP') === dateStr
+                  );
+
+                  return (
+                    <div 
+                      key={day} 
+                      className={`
+                        aspect-square flex flex-col items-center justify-center rounded-xl transition-all relative cursor-default
+                        ${logsOnDay.length > 0 ? 'bg-indigo-50 cursor-pointer hover:scale-105 active:scale-95 group' : 'hover:bg-slate-50'}
+                      `}
+                      onClick={() => {
+                        if (logsOnDay.length > 0) {
+                          const item = logsOnDay[0];
+                          setResult({ 
+                            strength: item.strength || item.analysis?.strength || "分析結果なし", 
+                            es_ready_text: item.esReadyText || item.es_ready_text || item.analysis?.es_ready_text || "文章が生成されていません" 
+                          });
+                          window.scrollTo({ top: 0, behavior: 'smooth' });
+                        }
+                      }}
+                    >
+                      <span className={`text-sm font-bold ${logsOnDay.length > 0 ? 'text-indigo-600' : 'text-slate-500'}`}>
+                        {day}
+                      </span>
+                      {logsOnDay.length > 0 && (
+                        <div className="w-1.5 h-1.5 bg-indigo-500 rounded-full mt-1 group-hover:animate-ping" />
+                      )}
+                      
+                      {/* ツールチップ的なポップアップ（ホバー時） */}
+                      {logsOnDay.length > 0 && (
+                        <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 w-48 bg-slate-900 text-white text-[10px] p-3 rounded-xl opacity-0 group-hover:opacity-100 pointer-events-none transition-opacity z-50 shadow-xl">
+                          <p className="font-bold mb-1 text-indigo-300">
+                            {logsOnDay[0].strength || "分析中"}
+                          </p>
+                          <p className="line-clamp-2 text-slate-300 leading-relaxed">
+                            {logsOnDay[0].content}
+                          </p>
+                          <div className="absolute top-full left-1/2 -translate-x-1/2 border-8 border-transparent border-t-slate-900" />
+                        </div>
+                      )}
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+
+            {history.length === 0 && (
+              <p className="text-slate-400 font-medium py-10 text-center bg-slate-50 rounded-3xl border-2 border-dashed border-slate-200">
+                まだログはありません。今日の頑張りを記録しましょう！
+              </p>
+            )}
           </section>
         )}
       </main>
