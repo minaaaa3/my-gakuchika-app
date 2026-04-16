@@ -99,15 +99,21 @@ export default function GakuchikaPage() {
       if (!token) return;
 
       const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
+      console.log(`Fetching logs from: ${apiUrl}/logs`);
+
       const response = await fetch(`${apiUrl}/logs`, {
-        headers: {
-          Authorization: `Bearer ${token}`,
+        headers: { 
+          Authorization: `Bearer ${token}` 
         },
       });
       if (response.ok) {
         const data = await response.json();
+        console.log(`Successfully fetched ${data.length} logs.`);
         setHistory(data);
+      } else {
+        console.error(`Failed to fetch logs: ${response.status} ${response.statusText}`);
       }
+
     } catch (e) {
       console.error("履歴の取得に失敗:", e);
     }
