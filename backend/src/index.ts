@@ -11,7 +11,11 @@ import { eq, desc } from "drizzle-orm";
 const app = express();
 const PORT = process.env.PORT || 5000;
 
-// --- サーバー起動チェック ---
+// ミドルウェア
+app.use(cors());
+app.use(express.json());
+
+// 【重要】ここでチェック！
 // ... (中略) ...
 
 // ヘルスチェック
