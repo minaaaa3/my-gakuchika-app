@@ -19,6 +19,7 @@ interface LogItem {
   content: string;
   createdAt?: string;
   created_at?: string;
+  generatedAt?: string;
   strength?: string;
   esReadyText?: string;
   es_ready_text?: string;
@@ -498,8 +499,8 @@ export default function GakuchikaPage() {
                     day
                   );
 
-                  const logsOnDay = history.filter((item) => {
-                    const dateValue = item.createdAt || item.created_at;
+                  const logsOnDay = history.filter(item => {
+                    const dateValue = item.createdAt || item.created_at || item.generatedAt;
                     if (!dateValue) return false;
                     const logDate = new Date(dateValue);
                     return (
@@ -508,6 +509,7 @@ export default function GakuchikaPage() {
                       logDate.getDate() === targetDate.getDate()
                     );
                   });
+
 
                   return (
                     <div
