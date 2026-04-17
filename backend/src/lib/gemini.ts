@@ -6,10 +6,16 @@ if (!apiKey) {
   console.error("❌ エラー: GEMINI_API_KEY が環境変数に設定されていません！");
 }
 
+interface GeminiResponse {
+  strength: string;
+  es_ready_text: string;
+  follow_up_questions: string[];
+}
+
 export const analyzeGakuchika = async (
   content: string,
   targetJob: string = "未定"
-): Promise<any> => {
+): Promise<GeminiResponse> => {
   if (!apiKey) {
     throw new Error("APIキーが設定されていないため、AI分析を実行できません。");
   }
@@ -92,14 +98,13 @@ export const analyzeGakuchika = async (
         jsonText = jsonText.substring(firstBrace, lastBrace + 1);
       }
 
-      return JSON.parse(jsonText);
-    } catch (error: any) {
-      console.error(`❌ ${modelName} で例外発生:`, error.message);
-      lastError = error;
+      return JSON.parse(jsonText) as GeminiResponse;
+    } catch (error) {
+      const message = error instanceof Error ? error.message : String(error);
+      console.error(`❌ ${modelName} で例外発生:`, message);
+      lastError = error instanceof Error ? error : new Error(message);
     }
   }
 
-  throw lastError || new Error("AIが正常に思考できませんでした。全モデルが失敗しました。");
-};
   throw lastError || new Error("AIが正常に思考できませんでした。全モデルが失敗しました。");
 };
