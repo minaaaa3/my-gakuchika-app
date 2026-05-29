@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { createClient } from "@/utils/supabase/client";
+import { authClient } from "@/lib/auth/client";
 
 export default function LoginPage() {
   const [email, setEmail] = useState("");
@@ -10,8 +10,6 @@ export default function LoginPage() {
   const [isSignUp, setIsSignUp] = useState(false);
   const [message, setMessage] = useState("");
 
-  const supabase = createClient();
-
   const handleAuth = async (e: React.FormEvent) => {
     e.preventDefault();
     setLoading(true);
@@ -19,18 +17,21 @@ export default function LoginPage() {
 
     try {
       if (isSignUp) {
-        const { error } = await supabase.auth.signUp({
+        const { error } = await authClient.signUp.email({
           email,
           password,
+          name: email.split("@")[0],
         });
-        if (error) throw error;
-        setMessage("確認メールを送信しました。リンクをクリックして登録を完了してください。");
+        if (error) throw new Error(error.message);
+        setMessage(
+          "登録しました。メール確認が有効な場合は、届いたメールのリンクをクリックしてください。完了後にログインできます。"
+        );
       } else {
-        const { error } = await supabase.auth.signInWithPassword({
+        const { error } = await authClient.signIn.email({
           email,
           password,
         });
-        if (error) throw error;
+        if (error) throw new Error(error.message);
         window.location.href = "/"; // ログイン成功時にトップページへリダイレクト
       }
     } catch (error) {

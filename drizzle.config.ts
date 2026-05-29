@@ -1,8 +1,11 @@
 import { defineConfig } from "drizzle-kit";
-import "dotenv/config";
+import { config } from "dotenv";
+
+// Next.js と同じ .env.local を読む
+config({ path: ".env.local" });
 
 export default defineConfig({
-  schema: "./src/db/schema.ts",
+  schema: "./db/schema.ts",
   out: "./drizzle",
   dialect: "postgresql",
   dbCredentials: {

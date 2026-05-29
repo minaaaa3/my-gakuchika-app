@@ -1,12 +1,11 @@
 "use client";
 
-import { useState, useEffect } from "react";
-import { Sparkles, ArrowRight, Quote } from "lucide-react";
+import { useState, useEffect, useCallback } from "react";
+import { Sparkles, Quote } from "lucide-react";
 import Lottie from "lottie-react";
 import loadingAnimation from "@/public/loading-bot.json";
-import { createClient } from "@/utils/supabase/client";
+import { authClient } from "@/lib/auth/client";
 import Link from "next/link";
-import { User } from "@supabase/supabase-js";
 
 // Types
 interface AnalysisResult {
@@ -70,11 +69,13 @@ export default function GakuchikaPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [history, setHistory] = useState<LogItem[]>([]);
-  const [user, setUser] = useState<User | null>(null);
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showCalendar, setShowCalendar] = useState(false);
 
-  const supabase = createClient();
+  // Neon Auth (Better Auth) のセッションから現在のユーザーを取得
+  const { data: session } = authClient.useSession();
+  const user = session?.user ?? null;
+  const userId = user?.id;
 
   // カレンダー用のヘルパー
   const getDaysInMonth = (year: number, month: number) =>
@@ -91,69 +92,30 @@ export default function GakuchikaPage() {
       new Date(currentDate.getFullYear(), currentDate.getMonth() + 1)
     );
 
-  const fetchHistory = async () => {
+  // 履歴取得（同一オリジンの API。セッションCookieは自動送信される）
+  const fetchHistory = useCallback(async () => {
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      if (!token) return;
-
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-      console.log(`Fetching logs from: ${apiUrl}/logs`);
-
-      const response = await fetch(`${apiUrl}/logs`, {
-        headers: { 
-          Authorization: `Bearer ${token}` 
-        },
-      });
+      const response = await fetch("/api/logs");
       if (response.ok) {
         const data = await response.json();
-        console.log(`Successfully fetched ${data.length} logs.`);
         setHistory(data);
-      } else {
-        console.error(`Failed to fetch logs: ${response.status} ${response.statusText}`);
+      } else if (response.status !== 401) {
+        console.error(
+          `Failed to fetch logs: ${response.status} ${response.statusText}`
+        );
       }
-
     } catch (e) {
       console.error("履歴の取得に失敗:", e);
     }
-  };
+  }, []);
 
+  // ログイン済みになったら履歴を取得
   useEffect(() => {
-    // --- 環境変数チェックログ ---
-    console.log("--- フロントエンド環境変数チェック ---");
-    console.log("API URL:", process.env.NEXT_PUBLIC_API_URL);
-    console.log(
-      "Supabase URL:",
-      process.env.NEXT_PUBLIC_SUPABASE_URL ? "✅ 設定あり" : "❌ 未設定"
-    );
-    console.log("-----------------------------------");
-
-    const getUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
-      if (user) fetchHistory();
-    };
-    getUser();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        const currentUser = session?.user || null;
-        setUser(currentUser);
-        if (currentUser) fetchHistory();
-      }
-    );
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, [supabase.auth]);
+    if (userId) fetchHistory();
+  }, [userId, fetchHistory]);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    await authClient.signOut();
   };
 
   const handleAnalyze = async () => {
@@ -166,17 +128,10 @@ export default function GakuchikaPage() {
     // 演出のために最低1.5秒はローディングを見せる
     const start = Date.now();
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const token = session?.access_token;
-
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-      const response = await fetch(`${apiUrl}/logs`, {
+      const response = await fetch("/api/logs", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token && { Authorization: `Bearer ${token}` }),
         },
         body: JSON.stringify({ content: text }),
       });
