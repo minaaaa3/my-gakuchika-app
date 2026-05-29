@@ -1,5 +1,3 @@
-import path from "path";
-
 const apiKey = process.env.GEMINI_API_KEY;
 
 if (!apiKey) {
@@ -78,7 +76,7 @@ export const analyzeGakuchika = async (
       }
 
       const data = await response.json();
-      
+
       if (!data.candidates || data.candidates.length === 0) {
         console.warn(`⚠️ ${modelName} からの回答が空です（安全フィルターの可能性があります）`);
         continue;
@@ -92,8 +90,8 @@ export const analyzeGakuchika = async (
       let jsonText = jsonMatch ? jsonMatch[1].trim() : responseText.trim();
       jsonText = jsonText.replace(/^```[a-zA-Z]*\s*/i, "").replace(/\s*```$/i, "").trim();
 
-      const firstBrace = jsonText.indexOf('{');
-      const lastBrace = jsonText.lastIndexOf('}');
+      const firstBrace = jsonText.indexOf("{");
+      const lastBrace = jsonText.lastIndexOf("}");
       if (firstBrace !== -1 && lastBrace !== -1 && lastBrace >= firstBrace) {
         jsonText = jsonText.substring(firstBrace, lastBrace + 1);
       }

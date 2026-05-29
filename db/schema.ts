@@ -1,19 +1,13 @@
 import { pgTable, uuid, text, varchar, timestamp } from "drizzle-orm/pg-core";
 
-// ユーザー情報
-export const users = pgTable("users", {
-  id: uuid("id").primaryKey().defaultRandom(),
-  email: varchar("email", { length: 255 }).notNull().unique(),
-  targetJob: varchar("target_job", { length: 100 }), // 志望職種（AIの変換精度を上げるため）
-  createdAt: timestamp("created_at").defaultNow().notNull(),
-});
+// ユーザーは Neon Auth (Better Auth) が neon_auth スキーマで管理する。
+// ここでは userId として Better Auth のユーザーID(text)を保持する。
+// （クロススキーマの外部キーは貼らず、drizzle-kit pull 後に必要なら追加する）
 
 // 日記ログ
 export const logs = pgTable("logs", {
   id: uuid("id").primaryKey().defaultRandom(),
-  userId: uuid("user_id")
-    .references(() => users.id, { onDelete: "cascade" })
-    .notNull(),
+  userId: text("user_id").notNull(), // Neon Auth のユーザーID
   content: text("content").notNull(), // 「今日やったこと」
   createdAt: timestamp("created_at").defaultNow().notNull(),
 });
