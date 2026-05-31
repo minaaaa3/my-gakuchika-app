@@ -4,9 +4,9 @@ import { useState, useEffect } from "react";
 import { Sparkles, ArrowRight, Quote } from "lucide-react";
 import Lottie from "lottie-react";
 import loadingAnimation from "@/public/loading-bot.json";
-import { createClient } from "@/utils/supabase/client";
+// import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
-import { User } from "@supabase/supabase-js";
+// import { User } from "@supabase/supabase-js";
 
 // Types
 interface AnalysisResult {
@@ -70,41 +70,41 @@ export default function GakuchikaPage() {
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [history, setHistory] = useState<LogItem[]>([]);
-  const [user, setUser] = useState<User | null>(null);
+  // 仮のユーザー状態（ログイン機能実装まで）
+  const [user, setUser] = useState<any>({ email: "guest@example.com" });
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showCalendar, setShowCalendar] = useState(false);
 
-  const supabase = createClient();
+  // const supabase = createClient();
 
-  // カレンダー用のヘルパー
-  const getDaysInMonth = (year: number, month: number) =>
-    new Date(year, month + 1, 0).getDate();
-  const getFirstDayOfMonth = (year: number, month: number) =>
-    new Date(year, month, 1).getDay();
+  const getDaysInMonth = (year: number, month: number) => {
+    return new Date(year, month + 1, 0).getDate();
+  };
 
-  const prevMonth = () =>
+  const getFirstDayOfMonth = (year: number, month: number) => {
+    return new Date(year, month, 1).getDay();
+  };
+
+  const prevMonth = () => {
     setCurrentDate(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1)
+      new Date(currentDate.getFullYear(), currentDate.getMonth() - 1, 1)
     );
-  const nextMonth = () =>
+  };
+
+  const nextMonth = () => {
     setCurrentDate(
-      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1)
+      new Date(currentDate.getFullYear(), currentDate.getMonth() + 1, 1)
     );
+  };
 
   const fetchHistory = async () => {
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const token = session?.access_token;
-      if (!token) return;
+      // 一時的にモック
+      console.log(`Fetching logs from: /api/logs`);
 
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-      console.log(`Fetching logs from: ${apiUrl}/logs`);
-
-      const response = await fetch(`${apiUrl}/logs`, {
+      const response = await fetch("/api/logs", {
         headers: { 
-          Authorization: `Bearer ${token}` 
+          // Authorization: `Bearer ${token}` 
         },
       });
       if (response.ok) {
@@ -121,39 +121,13 @@ export default function GakuchikaPage() {
   };
 
   useEffect(() => {
-    // --- 環境変数チェックログ ---
-    console.log("--- フロントエンド環境変数チェック ---");
-    console.log("API URL:", process.env.NEXT_PUBLIC_API_URL);
-    console.log(
-      "Supabase URL:",
-      process.env.NEXT_PUBLIC_SUPABASE_URL ? "✅ 設定あり" : "❌ 未設定"
-    );
-    console.log("-----------------------------------");
-
-    const getUser = async () => {
-      const {
-        data: { user },
-      } = await supabase.auth.getUser();
-      setUser(user);
-      if (user) fetchHistory();
-    };
-    getUser();
-
-    const { data: authListener } = supabase.auth.onAuthStateChange(
-      (event, session) => {
-        const currentUser = session?.user || null;
-        setUser(currentUser);
-        if (currentUser) fetchHistory();
-      }
-    );
-
-    return () => {
-      authListener.subscription.unsubscribe();
-    };
-  }, [supabase.auth]);
+    // 起動時に履歴を取得（ログイン済みと仮定）
+    fetchHistory();
+  }, []);
 
   const handleLogout = async () => {
-    await supabase.auth.signOut();
+    // await supabase.auth.signOut();
+    setUser(null);
   };
 
   const handleAnalyze = async () => {
@@ -163,20 +137,13 @@ export default function GakuchikaPage() {
     }
 
     setLoading(true);
-    // 演出のために最低1.5秒はローディングを見せる
     const start = Date.now();
     try {
-      const {
-        data: { session },
-      } = await supabase.auth.getSession();
-      const token = session?.access_token;
-
-      const apiUrl = process.env.NEXT_PUBLIC_API_URL || "http://localhost:5000";
-      const response = await fetch(`${apiUrl}/logs`, {
+      const response = await fetch("/api/logs", {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
-          ...(token && { Authorization: `Bearer ${token}` }),
+          // ...(token && { Authorization: `Bearer ${token}` }),
         },
         body: JSON.stringify({ content: text }),
       });
