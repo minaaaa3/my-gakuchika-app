@@ -10,13 +10,13 @@ CREATE TABLE "ai_analyses" (
 --> statement-breakpoint
 CREATE TABLE "logs" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
-	"user_id" uuid NOT NULL,
+	"user_id" text NOT NULL,
 	"content" text NOT NULL,
 	"created_at" timestamp DEFAULT now() NOT NULL
 );
 --> statement-breakpoint
 CREATE TABLE "users" (
-	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid() NOT NULL,
+	"id" text PRIMARY KEY NOT NULL,
 	"email" varchar(255) NOT NULL,
 	"target_job" varchar(100),
 	"created_at" timestamp DEFAULT now() NOT NULL,

@@ -5,15 +5,8 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1780031495747,
-      "tag": "0000_shiny_namor",
-      "breakpoints": true
-    },
-    {
-      "idx": 1,
-      "version": "7",
-      "when": 1780214236668,
-      "tag": "0001_strong_plazm",
+      "when": 1780233275830,
+      "tag": "0000_broken_magma",
       "breakpoints": true
     }
   ]

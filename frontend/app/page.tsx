@@ -4,9 +4,8 @@ import { useState, useEffect } from "react";
 import { Sparkles, ArrowRight, Quote } from "lucide-react";
 import Lottie from "lottie-react";
 import loadingAnimation from "@/public/loading-bot.json";
-// import { createClient } from "@/utils/supabase/client";
 import Link from "next/link";
-// import { User } from "@supabase/supabase-js";
+import { useUser, UserButton } from "@clerk/nextjs";
 
 // Types
 interface AnalysisResult {
@@ -66,12 +65,11 @@ const HandDrawnGradCap = () => (
 );
 
 export default function GakuchikaPage() {
+  const { user, isLoaded } = useUser();
   const [text, setText] = useState("");
   const [loading, setLoading] = useState(false);
   const [result, setResult] = useState<AnalysisResult | null>(null);
   const [history, setHistory] = useState<LogItem[]>([]);
-  // 仮のユーザー状態（ログイン機能実装まで）
-  const [user, setUser] = useState<any>({ email: "guest@example.com" });
   const [currentDate, setCurrentDate] = useState(new Date());
   const [showCalendar, setShowCalendar] = useState(false);
 
@@ -122,13 +120,12 @@ export default function GakuchikaPage() {
 
   useEffect(() => {
     // 起動時に履歴を取得（ログイン済みと仮定）
-    fetchHistory();
-  }, []);
+    if (isLoaded && user) {
+      fetchHistory();
+    }
+  }, [isLoaded, user]);
 
-  const handleLogout = async () => {
-    // await supabase.auth.signOut();
-    setUser(null);
-  };
+  if (!isLoaded) return null;
 
   const handleAnalyze = async () => {
     if (!user) {
@@ -192,14 +189,9 @@ export default function GakuchikaPage() {
             <div className="flex flex-col items-end gap-1">
               <div className="flex items-center gap-4">
                 <span className="text-sm font-medium text-slate-500 hidden sm:inline-block">
-                  {user.email}
+                  {user.primaryEmailAddress?.emailAddress}
                 </span>
-                <button
-                  onClick={handleLogout}
-                  className="text-sm font-bold text-slate-500 hover:text-rose-500 transition-colors"
-                >
-                  ログアウト
-                </button>
+                <UserButton />
               </div>
               <button
                 onClick={() => setShowCalendar(!showCalendar)}
